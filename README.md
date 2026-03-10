@@ -26,7 +26,7 @@ To run this project locally, ensure you have the following installed on your mac
 ## Local Setup and Execution
 1. **Clone the Repository:**
    ```bash
-   git clone <your-github-repo-url>
+   git clone https://github.com/ArchieAbr/housing_project_api.git
    cd housing_project_api
    ```
 
