@@ -40,6 +40,11 @@ To run this project locally, ensure you have the following installed on your mac
    * The API root health check will be available at: `http://localhost:8000/`
    * Interactive Swagger UI documentation: `http://localhost:8000/docs`
 
+4. **Testing Usage**
+    ```bash
+    docker-compose exec api pytest app/test_main.py -v
+    ```
+
 ## Dataset and Data Import
 This API is seeded with real-world public data sourced from the **HM Land Registry Price Paid Data** portal. 
 
