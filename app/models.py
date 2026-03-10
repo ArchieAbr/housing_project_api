@@ -1,0 +1,12 @@
+from sqlalchemy import Column, Integer, String
+from .db import Base
+
+class PropertyListing(Base):
+    __tablename__ = "property_listings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    address = Column(String, nullable=False)
+    postcode = Column(String, index=True, nullable=False)
+    price = Column(Integer, nullable=False)
+    property_type = Column(String, nullable=False)
+    bedrooms = Column(Integer, nullable=False)
