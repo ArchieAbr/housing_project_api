@@ -51,3 +51,33 @@ def get_listing(listing_id: int, database: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Property listing not found")
         
     return db_listing
+
+# --- UPDATE (PUT) ---
+@app.put("/api/listings/{listing_id}", response_model=schemas.PropertyListing)
+def update_listing(listing_id: int, updated_listing: schemas.PropertyListingCreate, database: Session = Depends(get_db)):
+    """Update an existing property listing."""
+    listing_query = database.query(models.PropertyListing).filter(models.PropertyListing.id == listing_id)
+    db_listing = listing_query.first()
+    
+    if not db_listing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
+        
+    listing_query.update(updated_listing.model_dump(), synchronize_session=False)
+    database.commit()
+    
+    return listing_query.first()
+
+# --- DELETE (DELETE) ---
+@app.delete("/api/listings/{listing_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_listing(listing_id: int, database: Session = Depends(get_db)):
+    """Remove a property listing from the database."""
+    listing_query = database.query(models.PropertyListing).filter(models.PropertyListing.id == listing_id)
+    db_listing = listing_query.first()
+    
+    if not db_listing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
+        
+    listing_query.delete(synchronize_session=False)
+    database.commit()
+    
+    return None
