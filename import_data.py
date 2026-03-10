@@ -1,3 +1,7 @@
+import os
+# Force the script to connect via localhost since it is running outside Docker
+os.environ["DATABASE_URL"] = "postgresql://user:password@localhost:5432/housing_db"
+
 import csv
 import random
 from app.db import SessionLocal
