@@ -1,0 +1,63 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy container app to Azure Web App - housing-project-api
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read #This is required for actions/checkout
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to container registry
+        uses: docker/login-action@v2
+        with:
+          registry: housingacr.azurecr.io/
+          username: ${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_FF47B1B4DAF84B7F8B57D9D2CECA2A27 }}
+          password: ${{ secrets.AZUREAPPSERVICE_CONTAINERPASSWORD_88B5A42B3ED94BD68F5375CFF5DC6A67 }}
+
+      - name: Build and push container image to registry
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          push: true
+          tags: housingacr.azurecr.io/${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_FF47B1B4DAF84B7F8B57D9D2CECA2A27 }}/housing-api:${{ github.sha }}
+          file: ./Dockerfile
+
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
+
+    needs: build
+    
+    steps:
+      
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_C21E0E000B1D45B6B21E1A9E62D35CBE }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_F3D911336CC2478FBB04D3FF2C27564D }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_9824FB1F7131462787C63D5E11DCC306 }}
+
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: 'housing-project-api'
+          slot-name: 'Production'
+          images: 'housingacr.azurecr.io/${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_FF47B1B4DAF84B7F8B57D9D2CECA2A27 }}/housing-api:${{ github.sha }}'
+          
