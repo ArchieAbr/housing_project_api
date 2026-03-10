@@ -81,3 +81,30 @@ def delete_listing(listing_id: int, database: Session = Depends(get_db)):
     database.commit()
     
     return None
+
+# --- READ (Analytics: Market Summary) ---
+@app.get("/api/analytics/market-summary", tags=["Analytics"])
+def get_market_summary(database: Session = Depends(get_db)):
+    """Retrieve aggregate market statistics grouped by property type."""
+    summary = (
+        database.query(
+            models.PropertyListing.property_type,
+            func.count(models.PropertyListing.id).label("total_listings"),
+            func.round(func.avg(models.PropertyListing.price)).label("average_price")
+        )
+        .group_by(models.PropertyListing.property_type)
+        .all()
+    )
+    
+    if not summary:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No listing data available for analysis")
+
+    # Format the raw database rows into a clean list of dictionaries
+    return [
+        {
+            "property_type": row.property_type, 
+            "total_listings": row.total_listings, 
+            "average_price": row.average_price
+        } 
+        for row in summary
+    ]
