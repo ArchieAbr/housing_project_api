@@ -14,20 +14,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# --- SECURITY ---
-API_KEY_NAME = "X-API-Key"
-API_KEY = "my_super_secret_key_123"
-
-api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
-
-def get_api_key(api_key_header: str = Security(api_key_header)):
-    if api_key_header == API_KEY:
-        return api_key_header
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Could not validate API Key"
-    )
-
 # Dependency: This function provides a fresh database session for each request securely closes it afterwards.
 def get_db():
     database = db.SessionLocal()
@@ -61,7 +47,6 @@ def get_listing(listing_id: int, database: Session = Depends(get_db)):
     """
     # Query the database for the specific ID
     db_listing = database.query(models.PropertyListing).filter(models.PropertyListing.id == listing_id).first()
-    api_key: str = Security(get_api_key)
     
     # If it doesn't exist, return 404 error
     if db_listing is None:
@@ -75,7 +60,6 @@ def update_listing(listing_id: int, updated_listing: schemas.PropertyListingCrea
     """Update an existing property listing."""
     listing_query = database.query(models.PropertyListing).filter(models.PropertyListing.id == listing_id)
     db_listing = listing_query.first()
-    api_key: str = Security(get_api_key)
     
     if not db_listing:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
@@ -91,7 +75,6 @@ def delete_listing(listing_id: int, database: Session = Depends(get_db)):
     """Remove a property listing from the database."""
     listing_query = database.query(models.PropertyListing).filter(models.PropertyListing.id == listing_id)
     db_listing = listing_query.first()
-    api_key: str = Security(get_api_key)
     
     if not db_listing:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
