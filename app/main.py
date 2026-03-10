@@ -108,3 +108,33 @@ def get_market_summary(database: Session = Depends(get_db)):
         } 
         for row in summary
     ]
+    
+# --- READ (Analytics: Affordability Calculator) ---
+@app.get("/api/analytics/affordability", response_model=List[schemas.PropertyListing], tags=["Analytics"])
+def calculate_affordability(
+    max_price: int, 
+    min_bedrooms: int = 1, 
+    database: Session = Depends(get_db)
+):
+    """Find the top 10 largest properties within a specific budget."""
+    
+    # Query properties matching budget and bedroom criteria
+    affordable_properties = (
+        database.query(models.PropertyListing)
+        .filter(models.PropertyListing.price <= max_price)
+        .filter(models.PropertyListing.bedrooms >= min_bedrooms)
+        # Sort by largest first, then lowest price
+        .order_by(models.PropertyListing.bedrooms.desc(), models.PropertyListing.price.asc())
+        # Restrict payload size
+        .limit(10)
+        .all()
+    )
+    
+    # Handle empty result sets
+    if not affordable_properties:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="No properties found matching these criteria"
+        )
+        
+    return affordable_properties
