@@ -35,7 +35,6 @@ def create_listing(listing: schemas.PropertyListingCreate, database: Session = D
     database.add(db_listing)
     database.commit()
     database.refresh(db_listing)
-    api_key: str = Security(get_api_key)
     
     return db_listing
 
