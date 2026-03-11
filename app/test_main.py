@@ -133,21 +133,25 @@ def test_radius_search_invalid_postcode():
 
 @patch("requests.get")
 def test_listing_enrichment_success(mock_get):
-    """Test successful enrichment with Police API data."""
-    # Setup: Create listing
+    """Test successful enrichment with Police API data using correct object structure."""
     client.post("/api/listings/", json=MOCK_LISTING, headers=AUTH_HEADERS)
     
-    # Mock Police API
+    # Mock the real Police API structure (where location_type is a DICT)
     mock_get.return_value.status_code = 200
     mock_get.return_value.json.return_value = [
-        {"category": "anti-social-behaviour", "location_type": {"name": "Street"}, "month": "2024-01"}
+        {
+            "category": "burglary", 
+            "location_type": {"name": "On or near Test Street"}, 
+            "month": "2024-01"
+        }
     ]
     
     response = client.get("/api/listings/1")
     assert response.status_code == 200
     data = response.json()
-    assert "local_crime" in data
-    assert data["local_crime"][0]["category"] == "Anti Social Behaviour" # Check formatting
+    # Verify the router successfully converted the dict to a string
+    assert data["local_crime"][0]["location_type"] == "On or near Test Street"
+    assert data["local_crime"][0]["category"] == "Burglary"
 
 @patch("requests.get")
 def test_listing_enrichment_resilience(mock_get):

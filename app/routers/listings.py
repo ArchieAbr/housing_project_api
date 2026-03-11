@@ -66,11 +66,13 @@ def get_listing(listing_id: int, database: Session = Depends(db.get_db)):
                 listing_data["local_crime"] = [
                     {
                         "category": c["category"].replace("-", " ").title(), 
-                        "location_type": c["location_type"], 
+                        # FIX: Extract the 'name' string from the location_type dictionary
+                        "location_type": c.get("location_type", {}).get("name", "Unknown"), 
                         "month": c["month"]
                     }
                     for c in crimes
                 ]
+                
         except Exception as e:
             # Log error internally but don't break the user experience
             print(f"External API Error: {e}")
