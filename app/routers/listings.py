@@ -26,14 +26,49 @@ def get_all_listings(skip: int = 0, limit: int = 100, database: Session = Depend
 
 @router.get("/{listing_id}", response_model=schemas.PropertyListing)
 def get_listing(listing_id: int, database: Session = Depends(db.get_db)):
+    """Retrieve a single listing enriched with live crime data from the UK Police API."""
     db_listing = database.query(models.PropertyListing).filter(models.PropertyListing.id == listing_id).first()
+    
     if db_listing is None:
         raise CustomAPIException(
-            name="NotFoundError",
-            detail="Property listing not found",
+            name="ListingNotFoundError", 
+            detail="Property listing not found", 
             status_code=status.HTTP_404_NOT_FOUND
         )
-    return db_listing
+
+    # Convert the SQLAlchemy model to a dictionary to add dynamic data
+    # This uses the updated response schema 
+    listing_data = schemas.PropertyListing.model_validate(db_listing).model_dump()
+
+    # If coordinates exist, fetch live crime data 
+    if db_listing.latitude and db_listing.longitude:
+        try:
+            police_url = "https://data.police.uk/api/crimes-street/all-crime"
+            params = {
+                "lat": db_listing.latitude,
+                "lng": db_listing.longitude,
+                "date": "2024-01"  # Static for now, but could be dynamic
+            }
+            # Timeout is crucial so a slow external API doesn't hang your server
+            response = requests.get(police_url, params=params, timeout=5)
+            
+            if response.status_code == 200:
+                # Limit to the most recent 10 crimes to keep the response concise
+                crimes = response.json()[:10]
+                listing_data["local_crime"] = [
+                    {
+                        "category": c["category"], 
+                        "location_type": c["location_type"]["name"], 
+                        "month": c["month"]
+                    }
+                    for c in crimes
+                ]
+        except Exception as e:
+            # If the external API fails, we still return the property data
+            print(f"External API Error: {e}")
+            listing_data["local_crime"] = []
+
+    return listing_data
 
 @router.put("/{listing_id}", response_model=schemas.PropertyListing, dependencies=[Depends(verify_api_key)])
 def update_listing(listing_id: int, updated_listing: schemas.PropertyListingCreate, database: Session = Depends(db.get_db)):
