@@ -1,7 +1,13 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 
-# 1. Base Schema: Contains the shared attributes
+# 1. New schema for Crime Data
+class CrimeStats(BaseModel):
+    category: str
+    location_type: str
+    month: str
+
+# 2. Base Schema: Contains the shared attributes
 class PropertyListingBase(BaseModel):
     address: str = Field(..., description="The first line of the address")
     # ADDED REGEX for standard UK postcodes (allows optional space)
@@ -13,11 +19,14 @@ class PropertyListingBase(BaseModel):
     latitude: Optional[float] = Field(None, description="Latitude coordinate")
     longitude: Optional[float] = Field(None, description="Longitude coordinate")
 
-# 2. Create Schema: Used specifically when a user sends a POST request to create a new listing
+# 3. Create Schema: Used specifically when a user sends a POST request to create a new listing
 class PropertyListingCreate(PropertyListingBase):
     pass # Inherits everything from the Base schema without adding anything new
 
-# 3. Response Schema: Used when the API sends data back to the user
+# 4. Response Schema: Used when the API sends data back to the user
 class PropertyListing(PropertyListingBase):
     id: int
+    # Add this line to allow the API to return the crime data
+    local_crime: Optional[List[CrimeStats]] = None 
+    
     model_config = ConfigDict(from_attributes=True)
