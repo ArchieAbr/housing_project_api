@@ -11,5 +11,8 @@ RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 # Copy the rest of the application code
 COPY ./app /code/app
 
+# Copy data file for seeding
+COPY ./leeds_housing_data.csv /code/leeds_housing_data.csv
+
 # Command to run the application using Uvicorn
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
