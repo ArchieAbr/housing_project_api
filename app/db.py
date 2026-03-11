@@ -10,6 +10,7 @@ SQLALCHEMY_DATABASE_URL = os.getenv(
     "postgresql://user:password@db:5432/housing_db"
 )
 
+
 # The engine is the core interface to the database
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
