@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from . import models, db
 from .routers import listings, analytics
+from .exceptions import CustomAPIException
 
 models.Base.metadata.create_all(bind=db.engine)
 

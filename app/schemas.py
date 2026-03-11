@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional
+from typing import Optional, List
 
 # 1. New schema for Crime Data
 class CrimeStats(BaseModel):
