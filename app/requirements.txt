@@ -6,3 +6,4 @@ alembic
 pytest
 httpx
 pydantic
+azure-monitor-opentelemetry

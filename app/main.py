@@ -1,5 +1,7 @@
 import os
 from contextlib import asynccontextmanager
+from azure.monitor.opentelemetry import configure_azure_monitor
+configure_azure_monitor()
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from alembic.config import Config
