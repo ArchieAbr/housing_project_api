@@ -1,5 +1,7 @@
-from sqlalchemy import Column, Integer, String, func
+from sqlalchemy import Column, Integer, String, func, Float
 from .db import Base
+
+
 
 class PropertyListing(Base):
     __tablename__ = "property_listings"

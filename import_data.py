@@ -4,8 +4,12 @@ os.environ["DATABASE_URL"] = "postgresql://user:password@localhost:5432/housing_
 
 import csv
 import random
-from app.db import SessionLocal
+import time
+import requests
+from app.db import SessionLocal, engine, Base
 from app.models import PropertyListing
+
+Base.metadata.create_all(bind=engine)
 
 # Map Land Registry property types to readable strings
 PROPERTY_TYPE_MAP = {
