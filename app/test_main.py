@@ -112,6 +112,24 @@ def test_invalid_data_payload():
     
     response = client.post("/api/listings/", json=invalid_data, headers=AUTH_HEADERS)
     assert response.status_code == 422
+    
+def test_invalid_postcode():
+    """Test Pydantic validation rejects malformed UK postcodes."""
+    invalid_data = MOCK_LISTING.copy()
+    invalid_data["postcode"] = "NOT A POSTCODE"  
+    
+    response = client.post("/api/listings/", json=invalid_data, headers=AUTH_HEADERS)
+    assert response.status_code == 422
+    assert "postcode" in response.text # Verifies the error specifies the postcode field
+
+def test_missing_mandatory_field():
+    """Test API rejects payloads missing required fields."""
+    invalid_data = MOCK_LISTING.copy()
+    del invalid_data["price"]  # Remove a required field
+    
+    response = client.post("/api/listings/", json=invalid_data, headers=AUTH_HEADERS)
+    assert response.status_code == 422
+    assert "price" in response.text
 
 # --- ANALYTICS TESTS ---
 
