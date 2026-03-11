@@ -29,6 +29,7 @@ jobs:
       - name: Run Pytest
         env:
           PYTHONPATH: .
+          API_KEY: ${{ secrets.API_KEY }}
         run: |
           pytest app/test_main.py -v
 
