@@ -1,170 +1,533 @@
-# UK Housing Market API (Leeds)
+# Leeds Housing Market API
 
-## Project Overview
+A production-ready RESTful API providing property listing data and market analytics for the Leeds housing market. Built with FastAPI and PostgreSQL, containerised with Docker, and deployed on Microsoft Azure.
 
-This project is a RESTful Web Services API developed for the COMP3011 module. It provides a robust, data-driven interface to query and analyse UK housing market transactions, specifically focusing on property data in Leeds. The API is built to demonstrate modern software engineering principles, containerised deployment, and advanced relational database querying.
+## Table of Contents
 
-## Core Features
+- [Features](#features)
+- [Technology Stack](#technology-stack)
+- [API Reference](#api-reference)
+  - [Listings Endpoints](#listings-endpoints)
+  - [Analytics Endpoints](#analytics-endpoints)
+- [Data Model](#data-model)
+- [Authentication](#authentication)
+- [Local Development](#local-development)
+- [Running Tests](#running-tests)
+- [Database Migrations](#database-migrations)
+- [Deployment](#deployment)
+- [Data Source](#data-source)
 
-- **Full CRUD Functionality:** Endpoints to Create, Read, Update, and Delete individual property listings.
-- **Market Analytics:** Advanced endpoints providing regional market summaries (average prices by property type) and an affordability calculator.
-- **Data Validation:** Strict input validation using Pydantic models.
-- **Containerisation:** Fully orchestrated local development environment using Docker Compose.
-- **Cloud Ready:** Architected for professional deployment on Azure App Service with a managed PostgreSQL backend.
+---
+
+## Features
+
+- **Full CRUD Operations** — Create, read, update and delete property listings
+- **Market Analytics** — Aggregated market summaries and affordability calculations
+- **Data Validation** — Strict input validation with UK postcode regex patterns
+- **API Key Authentication** — Protected write operations with header-based authentication
+- **Automatic Database Seeding** — Pre-populated with real Leeds property data on startup
+- **Database Migrations** — Version-controlled schema management with Alembic
+- **Containerised Development** — Docker Compose orchestration for local development
+- **Cloud-Native Deployment** — Configured for Azure App Service with managed PostgreSQL
+
+---
 
 ## Technology Stack
 
-- **Framework:** Python FastAPI
-- **Database:** PostgreSQL & SQLAlchemy (ORM)
-- **Validation:** Pydantic
-- **Containerisation:** Docker & Docker Compose
-- **Cloud Deployment:** Azure App Service & Azure Database for PostgreSQL Flexible Server
+| Component            | Technology                                                 |
+| -------------------- | ---------------------------------------------------------- |
+| **Framework**        | Python 3.11 / FastAPI                                      |
+| **Database**         | PostgreSQL 15                                              |
+| **ORM**              | SQLAlchemy                                                 |
+| **Migrations**       | Alembic                                                    |
+| **Validation**       | Pydantic                                                   |
+| **ASGI Server**      | Uvicorn                                                    |
+| **Containerisation** | Docker / Docker Compose                                    |
+| **Cloud Platform**   | Microsoft Azure (App Service + PostgreSQL Flexible Server) |
+| **Testing**          | pytest / httpx                                             |
 
-## Prerequisites
+---
 
-To run this project locally, ensure you have the following installed on your machine:
+## API Reference
 
-- Docker Desktop
-- Git
-- Python 3.11 (strictly for running the local data import script)
+### Base URLs
 
-## Local Setup and Execution
+| Environment           | URL                                                                               |
+| --------------------- | --------------------------------------------------------------------------------- |
+| **Production**        | `https://housing-project-api-bda2hwf3fzfvg0bb.francecentral-01.azurewebsites.net` |
+| **Local Development** | `http://localhost:8000`                                                           |
 
-1. **Clone the Repository:**
+Interactive API documentation is available at `/docs` (Swagger UI) and `/redoc` (ReDoc).
+
+---
+
+### Listings Endpoints
+
+#### Get All Listings
+
+Retrieve all property listings with pagination support.
+
+```
+GET /api/listings/
+```
+
+**Query Parameters:**
+
+| Parameter | Type    | Default | Description                         |
+| --------- | ------- | ------- | ----------------------------------- |
+| `skip`    | integer | 0       | Number of records to skip           |
+| `limit`   | integer | 100     | Maximum number of records to return |
+
+**Example Request:**
+
+```bash
+curl -X GET "http://localhost:8000/api/listings/?skip=0&limit=10" \
+  -H "Accept: application/json"
+```
+
+**Example Response:**
+
+```json
+[
+  {
+    "id": 1,
+    "address": "14, Victoria Road",
+    "postcode": "LS6 1PF",
+    "price": 275000,
+    "property_type": "Terraced",
+    "bedrooms": 3
+  }
+]
+```
+
+---
+
+#### Get Single Listing
+
+Retrieve a specific property listing by its ID.
+
+```
+GET /api/listings/{listing_id}
+```
+
+**Path Parameters:**
+
+| Parameter    | Type    | Description                          |
+| ------------ | ------- | ------------------------------------ |
+| `listing_id` | integer | The unique identifier of the listing |
+
+**Example Request:**
+
+```bash
+curl -X GET "http://localhost:8000/api/listings/1" \
+  -H "Accept: application/json"
+```
+
+**Error Response (404):**
+
+```json
+{
+  "error": "ListingNotFoundError",
+  "message": "Property listing not found"
+}
+```
+
+---
+
+#### Create Listing
+
+Create a new property listing. **Requires authentication.**
+
+```
+POST /api/listings/
+```
+
+**Headers:**
+
+| Header      | Required | Description                     |
+| ----------- | -------- | ------------------------------- |
+| `X-API-Key` | Yes      | Your API key for authentication |
+
+**Request Body:**
+
+```json
+{
+  "address": "42 Oak Street",
+  "postcode": "LS1 2AB",
+  "price": 350000,
+  "property_type": "Semi-Detached",
+  "bedrooms": 4
+}
+```
+
+**Example Request:**
+
+```bash
+curl -X POST "http://localhost:8000/api/listings/" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your_api_key_here" \
+  -d '{"address": "42 Oak Street", "postcode": "LS1 2AB", "price": 350000, "property_type": "Semi-Detached", "bedrooms": 4}'
+```
+
+**Response (201 Created):**
+
+```json
+{
+  "id": 42,
+  "address": "42 Oak Street",
+  "postcode": "LS1 2AB",
+  "price": 350000,
+  "property_type": "Semi-Detached",
+  "bedrooms": 4
+}
+```
+
+---
+
+#### Update Listing
+
+Update an existing property listing. **Requires authentication.**
+
+```
+PUT /api/listings/{listing_id}
+```
+
+**Headers:**
+
+| Header      | Required | Description                     |
+| ----------- | -------- | ------------------------------- |
+| `X-API-Key` | Yes      | Your API key for authentication |
+
+**Example Request:**
+
+```bash
+curl -X PUT "http://localhost:8000/api/listings/42" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your_api_key_here" \
+  -d '{"address": "42 Oak Street", "postcode": "LS1 2AB", "price": 375000, "property_type": "Semi-Detached", "bedrooms": 4}'
+```
+
+---
+
+#### Delete Listing
+
+Remove a property listing. **Requires authentication.**
+
+```
+DELETE /api/listings/{listing_id}
+```
+
+**Headers:**
+
+| Header      | Required | Description                     |
+| ----------- | -------- | ------------------------------- |
+| `X-API-Key` | Yes      | Your API key for authentication |
+
+**Example Request:**
+
+```bash
+curl -X DELETE "http://localhost:8000/api/listings/42" \
+  -H "X-API-Key: your_api_key_here"
+```
+
+**Response:** `204 No Content`
+
+---
+
+### Analytics Endpoints
+
+#### Market Summary
+
+Get aggregated statistics grouped by property type, including total listings and average prices.
+
+```
+GET /api/analytics/market-summary
+```
+
+**Example Request:**
+
+```bash
+curl -X GET "http://localhost:8000/api/analytics/market-summary" \
+  -H "Accept: application/json"
+```
+
+**Example Response:**
+
+```json
+[
+  {
+    "property_type": "Detached",
+    "total_listings": 145,
+    "average_price": 485000
+  },
+  {
+    "property_type": "Semi-Detached",
+    "total_listings": 312,
+    "average_price": 275000
+  },
+  {
+    "property_type": "Terraced",
+    "total_listings": 428,
+    "average_price": 195000
+  },
+  {
+    "property_type": "Flat",
+    "total_listings": 203,
+    "average_price": 145000
+  }
+]
+```
+
+---
+
+#### Affordability Search
+
+Find properties matching your budget and bedroom requirements.
+
+```
+GET /api/analytics/affordability
+```
+
+**Query Parameters:**
+
+| Parameter      | Type    | Required        | Description                   |
+| -------------- | ------- | --------------- | ----------------------------- |
+| `max_price`    | integer | Yes             | Maximum property price in GBP |
+| `min_bedrooms` | integer | No (default: 1) | Minimum number of bedrooms    |
+
+**Example Request:**
+
+```bash
+curl -X GET "http://localhost:8000/api/analytics/affordability?max_price=200000&min_bedrooms=2" \
+  -H "Accept: application/json"
+```
+
+**Example Response:**
+
+Returns up to 10 properties ordered by bedrooms (descending) then price (ascending).
+
+```json
+[
+  {
+    "id": 15,
+    "address": "8, Chapel Lane",
+    "postcode": "LS12 3CD",
+    "price": 185000,
+    "property_type": "Terraced",
+    "bedrooms": 3
+  }
+]
+```
+
+---
+
+## Data Model
+
+### PropertyListing
+
+| Field           | Type    | Constraints                  | Description                                    |
+| --------------- | ------- | ---------------------------- | ---------------------------------------------- |
+| `id`            | Integer | Primary Key, Auto-increment  | Unique identifier                              |
+| `address`       | String  | Required                     | Street address                                 |
+| `postcode`      | String  | Required, UK postcode format | Valid UK postcode                              |
+| `price`         | Integer | Required, > 0                | Price in GBP                                   |
+| `property_type` | String  | Required                     | Detached, Semi-Detached, Terraced, Flat, Other |
+| `bedrooms`      | Integer | Required, >= 0               | Number of bedrooms                             |
+
+**Postcode Validation Pattern:**
+
+```regex
+^[A-Z]{1,2}[0-9][A-Z0-9]? ?[0-9][A-Z]{2}$
+```
+
+---
+
+## Authentication
+
+Write operations (POST, PUT, DELETE) require API key authentication via the `X-API-Key` header.
+
+**Error Response (403 Forbidden):**
+
+```json
+{
+  "error": "AuthenticationError",
+  "message": "Invalid or missing API Key"
+}
+```
+
+For local development, set your API key in a `.env` file:
+
+```env
+API_KEY=your_secret_api_key_here
+```
+
+---
+
+## Local Development
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- [Git](https://git-scm.com/)
+- Python 3.11+ (optional, for running the import script directly)
+
+### Quick Start
+
+1. **Clone the repository:**
 
    ```bash
    git clone https://github.com/ArchieAbr/housing_project_api.git
    cd housing_project_api
    ```
 
-2. **Start the Docker Containers:**
-   Run the following command to build the API image and start both the API and PostgreSQL database containers simultaneously:
+2. **Create environment file:**
+
+   ```bash
+   echo "API_KEY=your_secret_key_here" > .env
+   ```
+
+3. **Start the containers:**
 
    ```bash
    docker-compose up --build
    ```
 
-3. **Access the Application:**
-   - The API root health check will be available at: `http://localhost:8000/`
-   - Interactive Swagger UI documentation: `http://localhost:8000/docs`
+4. **Access the API:**
+   - API Root: http://localhost:8000/
+   - Swagger Documentation: http://localhost:8000/docs
+   - ReDoc Documentation: http://localhost:8000/redoc
 
-4. **Testing Usage**
-   ```bash
-   docker-compose exec api pytest app/test_main.py -v
-   ```
+The database will be automatically seeded with Leeds property data on first startup.
 
-## Dataset and Data Import
+### Manual Data Import
 
-This API is seeded with real-world public data sourced from the **HM Land Registry Price Paid Data** portal.
+If you need to repopulate the database:
 
-To populate your local database:
+```bash
+# Install dependencies (if running outside Docker)
+pip install psycopg2-binary sqlalchemy
 
-1. Ensure your Docker containers are actively running.
-2. Open a separate terminal window in the project root directory.
-3. Install the local data parsing dependencies:
-   ```bash
-   pip install psycopg2-binary sqlalchemy
-   ```
-4. Execute the import script:
-   ```bash
-   python import_data.py
-   ```
-   _Note: The import script dynamically mocks "bedroom" counts to ensure full schema compatibility, as this specific metric is absent from the official Land Registry dataset._
-
-## Acknowledgements & Academic Integrity
-
-- **Data Source:** HM Land Registry Price Paid Data (Licensed under the Open Government Licence v3.0).
-- **Generative AI:** This project was developed in compliance with the COMP3011 'GREEN' GenAI policy. AI tools were utilised for architectural ideation, debugging, and data processing.
+# Run the import script
+python import_data.py
+```
 
 ---
 
-## Database Migrations with Alembic
+## Running Tests
 
-This project uses **Alembic** for database schema management. Migrations are version-controlled and run automatically on deployment.
+Execute the test suite inside the Docker container:
+
+```bash
+docker-compose exec api pytest app/test_main.py -v
+```
+
+**Test Coverage:**
+
+- Authentication and authorisation
+- CRUD operations
+- Data validation (postcode format, price constraints)
+- Pagination logic
+- Error handling
+
+---
+
+## Database Migrations
+
+This project uses **Alembic** for database schema management. Migrations run automatically on application startup.
 
 ### How It Works
 
-1. **Automatic Migrations:** When the app starts (locally or on Azure), it automatically runs any pending migrations
-2. **Version Tracking:** Each migration is stored in `app/alembic/versions/` and tracked in the database
-3. **No Duplicates:** Alembic tracks which migrations have been applied, so they only run once
+1. Migrations are stored in `app/alembic/versions/`
+2. The application checks for pending migrations at startup
+3. Schema changes are applied automatically before the API becomes available
 
-### Making Schema Changes
+### Creating a New Migration
 
-When you need to modify the database schema (add tables, columns, etc.):
+When modifying the database schema:
 
-#### Step 1: Modify Your Model
+1. **Update your model** in `app/models.py`
 
-Edit `app/models.py` with your changes:
+2. **Generate a migration:**
 
-```python
-class PropertyListing(Base):
-    __tablename__ = "property_listings"
-    # ... existing columns ...
-    energy_rating = Column(String, nullable=True)  # NEW COLUMN
+   ```bash
+   cd app
+   alembic revision --autogenerate -m "Description of changes"
+   ```
+
+3. **Review the generated migration** in `app/alembic/versions/`
+
+4. **Commit and deploy** — migrations apply automatically on startup
+
+---
+
+## Deployment
+
+The application is deployed on **Microsoft Azure** using:
+
+- **Azure App Service** (Linux container)
+- **Azure Database for PostgreSQL Flexible Server**
+- **Azure Container Registry** (for Docker images)
+
+### Environment Variables (Azure)
+
+Configure these in the App Service Configuration:
+
+| Variable       | Description                       |
+| -------------- | --------------------------------- |
+| `DATABASE_URL` | PostgreSQL connection string      |
+| `API_KEY`      | Secret key for API authentication |
+
+### Deployment Flow
+
+1. Push changes to the repository
+2. Container image is built and pushed to Azure Container Registry
+3. App Service pulls the new image and restarts
+4. Alembic migrations run automatically on startup
+5. Database is seeded if empty
+
+---
+
+## Data Source
+
+This API is populated with real property transaction data from the **HM Land Registry Price Paid Data**.
+
+- **Source:** [HM Land Registry Open Data](https://www.gov.uk/government/collections/price-paid-data)
+- **Licence:** Open Government Licence v3.0
+- **Coverage:** Leeds metropolitan area
+- **Note:** Bedroom counts are synthetically generated based on property type, as this field is not included in the Land Registry dataset.
+
+---
+
+## Project Structure
+
+```
+housing_project_api/
+├── app/
+│   ├── alembic/              # Database migrations
+│   │   └── versions/         # Migration scripts
+│   ├── routers/              # API route handlers
+│   │   ├── listings.py       # CRUD endpoints
+│   │   └── analytics.py      # Analytics endpoints
+│   ├── __init__.py
+│   ├── main.py               # FastAPI application entry point
+│   ├── models.py             # SQLAlchemy models
+│   ├── schemas.py            # Pydantic validation schemas
+│   ├── db.py                 # Database configuration
+│   ├── auth.py               # API key authentication
+│   ├── exceptions.py         # Custom exception classes
+│   ├── seed.py               # Database seeding logic
+│   └── test_main.py          # Test suite
+├── docker-compose.yml        # Local development orchestration
+├── Dockerfile                # Container image definition
+├── import_data.py            # Manual data import script
+├── leeds_housing_data.csv    # Source data file
+└── README.md
 ```
 
-#### Step 2: Generate Migration
+---
 
-Navigate to the `app/` directory and run:
+## Licence
 
-```bash
-cd app
-alembic revision --autogenerate -m "Add energy_rating column"
-```
+This project was developed for the COMP3011 module at the University of Leeds.
 
-This creates a new migration file in `app/alembic/versions/`.
-
-#### Step 3: Review the Migration
-
-Open the generated file and verify the `upgrade()` and `downgrade()` functions are correct.
-
-#### Step 4: Test Locally
-
-```bash
-# Apply migration to local Docker database
-alembic upgrade head
-```
-
-#### Step 5: Deploy
-
-Commit and push your changes:
-
-```bash
-git add -A
-git commit -m "Add energy_rating column"
-git push
-```
-
-The migration will run automatically when the Azure app restarts.
-
-### Useful Alembic Commands
-
-Run these from the `app/` directory:
-
-| Command                                        | Description                    |
-| ---------------------------------------------- | ------------------------------ |
-| `alembic current`                              | Show current migration version |
-| `alembic history`                              | Show migration history         |
-| `alembic upgrade head`                         | Apply all pending migrations   |
-| `alembic downgrade -1`                         | Rollback last migration        |
-| `alembic revision --autogenerate -m "message"` | Generate new migration         |
-
-### Environment Setup for Local Development
-
-When running Alembic commands locally, ensure your `DATABASE_URL` environment variable is set:
-
-```bash
-# For local Docker database
-export DATABASE_URL="postgresql://user:password@localhost:5432/housing_db"
-
-# Or set it inline
-DATABASE_URL="postgresql://user:password@localhost:5432/housing_db" alembic upgrade head
-```
-
-### Migration Best Practices
-
-1. **Always review auto-generated migrations** - Alembic may not detect all changes perfectly
-2. **Test migrations locally** before deploying to production
-3. **Keep migrations small** - One logical change per migration
-4. **Never edit migrations** that have been deployed to production
-5. **Write reversible migrations** - Always implement `downgrade()` functions
+Data sourced from HM Land Registry under the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
