@@ -18,3 +18,11 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Base is the foundational class we will inherit from to create our database models
 Base = declarative_base()
+
+def get_db():
+    """Dependency to yield a database session."""
+    database = SessionLocal()
+    try:
+        yield database
+    finally:
+        database.close()
