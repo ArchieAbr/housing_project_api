@@ -10,3 +10,7 @@ class PropertyListing(Base):
     price = Column(Integer, nullable=False)
     property_type = Column(String, nullable=False)
     bedrooms = Column(Integer, nullable=False)
+    
+    # NEW GEOSPATIAL COLUMNS
+    latitude = Column(Float, nullable=True, index=True)
+    longitude = Column(Float, nullable=True, index=True)

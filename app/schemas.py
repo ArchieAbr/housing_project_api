@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
+from typing import Optional
 
 # 1. Base Schema: Contains the shared attributes
 class PropertyListingBase(BaseModel):
@@ -8,6 +9,9 @@ class PropertyListingBase(BaseModel):
     price: int = Field(..., gt=0, description="The property price in GBP, must be strictly greater than 0")
     property_type: str = Field(..., description="e.g., Detached, Flat, Terraced")
     bedrooms: int = Field(..., ge=0, description="Number of bedrooms, cannot be negative")
+    # NEW GEOSPATIAL FIELDS
+    latitude: Optional[float] = Field(None, description="Latitude coordinate")
+    longitude: Optional[float] = Field(None, description="Longitude coordinate")
 
 # 2. Create Schema: Used specifically when a user sends a POST request to create a new listing
 class PropertyListingCreate(PropertyListingBase):
