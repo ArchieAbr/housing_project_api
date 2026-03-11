@@ -31,6 +31,7 @@ jobs:
           PYTHONPATH: .
           API_KEY: ${{ secrets.API_KEY }}
         run: |
+          pip install pytest-cov
           pytest app/test_main.py -v
 
   build:
