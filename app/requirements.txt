@@ -6,6 +6,3 @@ alembic
 pytest
 httpx
 pydantic
-requests
-geopy
-python-dateutil

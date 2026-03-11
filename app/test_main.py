@@ -1,7 +1,5 @@
 import os
 import pytest
-import requests
-from unittest.mock import patch
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -42,9 +40,7 @@ MOCK_LISTING = {
     "postcode": "LS1 2BH",
     "price": 300000,
     "property_type": "Semi-Detached",
-    "bedrooms": 3,
-    "latitude": 53.799,
-    "longitude": -1.549
+    "bedrooms": 3
 }
 
 @pytest.fixture(autouse=True)
@@ -98,72 +94,6 @@ def test_pagination_logic():
     
     response = client.get("/api/listings/?skip=2&limit=2")
     assert len(response.json()) == 2
-
-# --- GEOSPATIAL & ANALYTICS TESTS ---
-
-@patch("requests.get")
-def test_radius_search_logic(mock_geo):
-    """Test Haversine distance calculation via Radius Search."""
-    # Mock postcodes.io for the search centre (LS1 2BH)
-    mock_geo.return_value.status_code = 200
-    mock_geo.return_value.json.return_value = {
-        "result": {"latitude": 53.799, "longitude": -1.549}
-    }
-    
-    # Create one property inside radius, one outside
-    # 53.799, -1.549 is the centre
-    client.post("/api/listings/", json=MOCK_LISTING, headers=AUTH_HEADERS) # Inside
-    
-    far_listing = MOCK_LISTING.copy()
-    far_listing["latitude"] = 51.507 # London
-    far_listing["longitude"] = -0.127
-    client.post("/api/listings/", json=far_listing, headers=AUTH_HEADERS)
-    
-    response = client.get("/api/analytics/radius-search?postcode=LS12BH&radius_miles=5")
-    assert response.status_code == 200
-    assert len(response.json()) == 1
-
-def test_radius_search_invalid_postcode():
-    with patch("requests.get") as mock_get:
-        mock_get.return_value.status_code = 404
-        response = client.get("/api/analytics/radius-search?postcode=INVALID")
-        assert response.status_code == 400
-
-# --- EXTERNAL API MOCKING (POLICE API) ---
-
-@patch("requests.get")
-def test_listing_enrichment_success(mock_get):
-    """Test successful enrichment with Police API data using correct object structure."""
-    client.post("/api/listings/", json=MOCK_LISTING, headers=AUTH_HEADERS)
-    
-    # Mock the real Police API structure (where location_type is a DICT)
-    mock_get.return_value.status_code = 200
-    mock_get.return_value.json.return_value = [
-        {
-            "category": "burglary", 
-            "location_type": {"name": "On or near Test Street"}, 
-            "month": "2024-01"
-        }
-    ]
-    
-    response = client.get("/api/listings/1")
-    assert response.status_code == 200
-    data = response.json()
-    # Verify the router successfully converted the dict to a string
-    assert data["local_crime"][0]["location_type"] == "On or near Test Street"
-    assert data["local_crime"][0]["category"] == "Burglary"
-
-@patch("requests.get")
-def test_listing_enrichment_resilience(mock_get):
-    """Verify API doesn't crash if Police API is down."""
-    client.post("/api/listings/", json=MOCK_LISTING, headers=AUTH_HEADERS)
-    
-    # Mock Failure
-    mock_get.side_effect = requests.exceptions.Timeout()
-    
-    response = client.get("/api/listings/1")
-    assert response.status_code == 200
-    assert response.json()["local_crime"] == [] # Graceful fallback
 
 # --- DATA VALIDATION TESTS ---
 

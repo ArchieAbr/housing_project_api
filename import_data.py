@@ -4,8 +4,6 @@ os.environ["DATABASE_URL"] = "postgresql://user:password@localhost:5432/housing_
 
 import csv
 import random
-import time
-import requests
 from app.db import SessionLocal, engine, Base
 from app.models import PropertyListing
 

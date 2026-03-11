@@ -2,7 +2,6 @@
 import os
 import csv
 import random
-import requests
 from .db import SessionLocal
 from .models import PropertyListing
 
@@ -28,21 +27,6 @@ def build_address(row: dict) -> str:
     parts = [row.get('saon', ''), row.get('paon', ''), row.get('street', '')]
     clean_parts = [p.strip() for p in parts if p and p.strip()]
     return ", ".join(clean_parts)
-
-def geocode_postcode(postcode: str) -> tuple:
-    """Get lat/lng for a UK postcode using free postcodes.io API."""
-    try:
-        clean_postcode = postcode.replace(" ", "").lower()
-        response = requests.get(
-            f"https://api.postcodes.io/postcodes/{clean_postcode}",
-            timeout=5
-        )
-        if response.status_code == 200:
-            data = response.json()["result"]
-            return data["latitude"], data["longitude"]
-    except Exception:
-        pass
-    return None, None
 
 def find_csv_file() -> str:
     """Find the CSV data file in various possible locations."""
@@ -90,17 +74,12 @@ def seed_database_if_empty():
                 raw_type = row.get('property_type', 'O')
                 mapped_type = PROPERTY_TYPE_MAP.get(raw_type, 'Other')
                 
-                # Geocode the postcode
-                lat, lng = geocode_postcode(row['postcode'])
-                
                 listing = PropertyListing(
                     address=build_address(row),
                     postcode=row['postcode'],
                     price=int(row['price_paid']),
                     property_type=mapped_type,
-                    bedrooms=generate_mock_bedrooms(raw_type),
-                    latitude=lat,
-                    longitude=lng
+                    bedrooms=generate_mock_bedrooms(raw_type)
                 )
                 listings_to_add.append(listing)
             
