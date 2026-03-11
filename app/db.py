@@ -11,12 +11,15 @@ SQLALCHEMY_DATABASE_URL = os.getenv(
     "postgresql://user:password@db:5432/housing_db"
 )
 
-# Azure PostgreSQL requires SSL - add sslmode if connecting to Azure
+# Azure PostgreSQL requires SSL - add sslmode if not localhost/docker
 connect_args = {}
-if "azure" in SQLALCHEMY_DATABASE_URL.lower():
-    # Ensure sslmode is set for Azure connections
-    if "sslmode" not in SQLALCHEMY_DATABASE_URL:
+is_local = "localhost" in SQLALCHEMY_DATABASE_URL or "@db:" in SQLALCHEMY_DATABASE_URL
+if not is_local:
+    # Ensure sslmode is set for cloud connections
+    if "?" not in SQLALCHEMY_DATABASE_URL:
         SQLALCHEMY_DATABASE_URL += "?sslmode=require"
+    elif "sslmode" not in SQLALCHEMY_DATABASE_URL:
+        SQLALCHEMY_DATABASE_URL += "&sslmode=require"
     connect_args = {"connect_timeout": 30}
 
 # The engine is the core interface to the database
