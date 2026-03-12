@@ -45,6 +45,7 @@ A production-ready RESTful API providing property listing data and market analyt
 | **Containerisation** | Docker / Docker Compose                                    |
 | **Cloud Platform**   | Microsoft Azure (App Service + PostgreSQL Flexible Server) |
 | **Testing**          | pytest / httpx                                             |
+| **LLM Integration**  | Google Gemini API (Generative AI for smart search)         |
 
 ---
 
@@ -236,6 +237,69 @@ curl -X DELETE "http://localhost:8000/api/listings/42" \
 
 ### Analytics Endpoints
 
+#### Smart Property Search (LLM-powered)
+
+Leverage generative AI (Google Gemini) to interpret natural language property search queries and translate them into structured database filters.
+
+**Request Body:**
+
+```json
+{
+"query": "I need a detached family home in LS6 with 3 bedrooms for under £350k"
+}
+```
+
+**Example Request:**
+
+```bash
+curl -X POST "http://localhost:8000/api/analytics/smart-search" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "I need a detached family home in LS6 with 3 bedrooms for under £350k"}'
+```
+
+**Example Response:**
+
+```json
+{
+  "ai_interpretation": {
+    "max_price": 350000,
+    "min_bedrooms": 3,
+    "property_type": "Detached",
+    "postcode_district": "LS6"
+  },
+  "results_count": 2,
+  "properties": [
+    {
+      "id": 12,
+      "address": "14, Victoria Road",
+      "postcode": "LS6 1PF",
+      "price": 275000,
+      "property_type": "Detached",
+      "bedrooms": 3
+    }
+    // ...more results
+  ]
+}
+```
+**How it works:**
+
+*   The endpoint accepts a free-form English query describing property requirements.
+    
+*   The backend uses Google Gemini (Generative AI) to extract structured search parameters (max price, bedrooms, property type, postcode) from the query.
+    
+*   The AI is prompted to return strict JSON, which is parsed and used to dynamically build a SQLAlchemy query.
+    
+*   Results are filtered and returned, along with the AI's interpretation for transparency.
+    
+
+**Implementation details:**
+
+*   The Gemini API key must be set as the GEMINI\_API\_KEY environment variable for this feature to work.
+    
+*   If the key is not set, the endpoint returns a 500 error.
+    
+*   The prompt engineering ensures robust extraction and strict JSON output from the LLM.
+
 #### Market Summary
 
 Get aggregated statistics grouped by property type, including total listings and average prices.
@@ -370,6 +434,14 @@ API_KEY=your_secret_api_key_here
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - [Git](https://git-scm.com/)
 - Python 3.11+ (optional, for running the import script directly)
+
+**Note:**
+*   Azure Monitor / Application Insights integration is not required for local development. The API will run without any Azure-specific environment variables.
+    
+*   For LLM-powered smart search, set your Gemini API key in a [.env](vscode-file://vscode-app/c:/Users/archi/AppData/Local/Programs/Microsoft VS Code/ce099c1ed2/resources/app/out/vs/code/electron-browser/workbench/workbench.html) file:
+```bash
+GEMINI_API_KEY=your_gemini_api_key_here
+```
 
 ### Quick Start
 
@@ -531,3 +603,4 @@ housing_project_api/
 This project was developed for the COMP3011 module at the University of Leeds.
 
 Data sourced from HM Land Registry under the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
+
