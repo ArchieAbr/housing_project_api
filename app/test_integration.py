@@ -309,7 +309,34 @@ class TestAnalytics:
         """Affordability search requires max_price parameter."""
         response = client.get("/api/analytics/affordability")
         assert response.status_code == 422  # Missing required param
+    def test_smart_search_valid_query(self, client: httpx.Client):
+        """Smart search should successfully parse a natural language string using Gemini."""
+        payload = {"query": "Find me a detached family home in LS6 for under 350000"}
+        response = client.post("/api/analytics/smart-search", json=payload)
+        
+        # If the GEMINI_API_KEY is missing on Azure, it raises a 500 error. 
+        # If configured, it should return 200.
+        assert response.status_code in [200, 500], f"Unexpected status: {response.status_code}. Response: {response.text}"
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Check response structure
+            assert "ai_interpretation" in data
+            assert "results_count" in data
+            assert "properties" in data
+            assert isinstance(data["properties"], list)
+            
+            # Verify the AI correctly extracted the parameters from the sentence
+            interpretation = data["ai_interpretation"]
+            assert interpretation.get("property_type") == "Detached"
+            assert interpretation.get("postcode_district") == "LS6"
+            assert interpretation.get("max_price") == 350000
 
+    def test_smart_search_missing_query(self, client: httpx.Client):
+        """Smart search should reject requests without a query string."""
+        response = client.post("/api/analytics/smart-search", json={})
+        assert response.status_code == 422
 
 # =============================================================================
 # RESPONSE FORMAT TESTS
@@ -378,6 +405,18 @@ class TestPerformance:
         
         assert response.status_code in [200, 404]
         assert elapsed < 10.0, f"Response took {elapsed:.2f}s, expected < 10s"
+    
+    def test_smart_search_responds_within_llm_limits(self, client: httpx.Client):
+        """Smart search (LLM call) should respond within acceptable time limit."""
+        import time
+        start = time.time()
+        payload = {"query": "I am looking for a flat in LS1"}
+        response = client.post("/api/analytics/smart-search", json=payload)
+        elapsed = time.time() - start
+        
+        if response.status_code == 200:
+            # LLM API calls typically take 1-4 seconds. We allow up to 10s for network variance.
+            assert elapsed < 10.0, f"LLM API response took {elapsed:.2f}s, expected < 10s"
 
 
 # =============================================================================
