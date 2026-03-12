@@ -43,7 +43,10 @@ def run_migrations():
 async def lifespan(app: FastAPI):
     """Startup and shutdown events for the application."""
     # Startup: Run migrations and seed data if empty
-    run_migrations()
+    try:
+        run_migrations()
+    except Exception as e:
+        print(f"DB seeding bypassed (awaiting migrations): {e}")
     seed_database_if_empty()
     yield
     # Shutdown: Nothing to clean up
