@@ -1,13 +1,83 @@
+import os
+import json
+import google.generativeai as genai
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List
+from pydantic import BaseModel
 from .. import models, schemas, db
-
+from ..db import get_db
+from ..models import PropertyListing
 router = APIRouter(
     prefix="/api/analytics",
     tags=["Analytics"]
 )
+
+# Configure the Gemini API
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+
+class SmartSearchRequest(BaseModel):
+    query: str
+
+@router.post("/smart-search")
+def smart_property_search(request: SmartSearchRequest, db: Session = Depends(get_db)):
+    """
+    Creative GenAI Feature: Translate a natural language sentence into a database query.
+    Example: "I need a detached family home in LS6 with 3 bedrooms for under £350k"
+    """
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=500, detail="Gemini API key not configured on the server.")
+
+    # 1. Prompt Engineering: Force the LLM to return strict JSON
+    prompt = f"""
+    You are a UK real estate data extraction tool. Extract search parameters from the user's query.
+    Map the property type strictly to one of: 'Detached', 'Semi-Detached', 'Terraced', 'Flat', 'Other'.
+    If a parameter is not mentioned, set its value to null.
+    
+    User Query: "{request.query}"
+    
+    Return ONLY a valid JSON object with these exact keys: 
+    "max_price" (integer or null), 
+    "min_bedrooms" (integer or null), 
+    "property_type" (string or null),
+    "postcode_district" (string or null, e.g., 'LS6')
+    """
+
+    try:
+        # 2. Call the Gemini API
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        response = model.generate_content(prompt)
+        
+        # Strip any markdown formatting the LLM might have added (like ```json ... ```)
+        clean_json_string = response.text.replace("```json", "").replace("```", "").strip()
+        search_params = json.loads(clean_json_string)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI parsing failed: {str(e)}")
+
+    # 3. Dynamically build the SQLAlchemy query based on the LLM's output
+    db_query = db.query(PropertyListing)
+    
+    if search_params.get("max_price"):
+        db_query = db_query.filter(PropertyListing.price <= search_params["max_price"])
+    if search_params.get("min_bedrooms"):
+        db_query = db_query.filter(PropertyListing.bedrooms >= search_params["min_bedrooms"])
+    if search_params.get("property_type"):
+        db_query = db_query.filter(PropertyListing.property_type == search_params["property_type"])
+    if search_params.get("postcode_district"):
+        db_query = db_query.filter(PropertyListing.postcode.like(f"{search_params['postcode_district']}%"))
+
+    # 4. Execute and return
+    results = db_query.order_by(PropertyListing.price.asc()).limit(20).all()
+    
+    return {
+        "ai_interpretation": search_params,
+        "results_count": len(results),
+        "properties": results
+    }
 
 @router.get("/market-summary")
 def get_market_summary(database: Session = Depends(db.get_db)):

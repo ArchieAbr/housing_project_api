@@ -9,6 +9,7 @@ services:
       - db
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/housing_db
+      - GEMINI_API_KEY=${GEMINI_API_KEY} # <-- ADD THIS LINE
 
   db:
     image: postgres:15-alpine
