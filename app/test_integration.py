@@ -309,13 +309,14 @@ class TestAnalytics:
         """Affordability search requires max_price parameter."""
         response = client.get("/api/analytics/affordability")
         assert response.status_code == 422  # Missing required param
+        
     def test_smart_search_valid_query(self, client: httpx.Client):
         """Smart search should successfully parse a natural language string using Gemini."""
         payload = {"query": "Find me a detached family home in LS6 for under 350000"}
         response = client.post("/api/analytics/smart-search", json=payload)
         
-        # If the GEMINI_API_KEY is missing on Azure, it raises a 500 error. 
-        # If configured, it should return 200.
+        # If the GEMINI_API_KEY is missing, it raises a 500 error. 
+        # If configured, return 200.
         assert response.status_code in [200, 500], f"Unexpected status: {response.status_code}. Response: {response.text}"
         
         if response.status_code == 200:
@@ -329,7 +330,9 @@ class TestAnalytics:
             
             # Verify the AI correctly extracted the parameters from the sentence
             interpretation = data["ai_interpretation"]
-            assert interpretation.get("property_type") == "Detached"
+            
+            # UPDATED: We now check the plural 'property_types' list
+            assert "Detached" in interpretation.get("property_types", [])
             assert interpretation.get("postcode_district") == "LS6"
             assert interpretation.get("max_price") == 350000
 
