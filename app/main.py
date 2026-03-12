@@ -1,7 +1,13 @@
 import os
 from contextlib import asynccontextmanager
-from azure.monitor.opentelemetry import configure_azure_monitor
-configure_azure_monitor()
+# Only configure Azure Monitor if the connection string is present in the environment
+if os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
+    try:
+        from azure.monitor.opentelemetry import configure_azure_monitor
+        configure_azure_monitor()
+    except Exception as e:
+        print(f"Azure Monitor configuration bypassed: {e}")
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from alembic.config import Config
