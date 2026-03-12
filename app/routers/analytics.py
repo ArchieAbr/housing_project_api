@@ -31,18 +31,23 @@ def smart_property_search(request: SmartSearchRequest, db: Session = Depends(get
     if not GEMINI_API_KEY:
         raise HTTPException(status_code=500, detail="Gemini API key not configured on the server.")
 
-    # 1. Prompt Engineering: Force the LLM to return strict JSON
+    # 1. Advanced Prompt Engineering with Inference Rules
     prompt = f"""
-    You are a UK real estate data extraction tool. Extract search parameters from the user's query.
-    Map the property type strictly to one of: 'Detached', 'Semi-Detached', 'Terraced', 'Flat', 'Other'.
-    If a parameter is not mentioned, set its value to null.
+    You are an expert UK property market data extraction tool. Extract search parameters from the user's query.
     
+    Inference Rules:
+    - If the user asks for a 'house' or 'home', they mean ANY house. Return: ["Detached", "Semi-Detached", "Terraced"]
+    - If the user asks for a 'flat' or 'apartment', return: ["Flat"]
+    - If the user explicitly asks for a specific type (e.g., 'detached house'), return just that type: ["Detached"]
+    - If no property type is mentioned, return null.
+    - If no maximum price is mentioned, return null.
+
     User Query: "{request.query}"
     
     Return ONLY a valid JSON object with these exact keys: 
     "max_price" (integer or null), 
     "min_bedrooms" (integer or null), 
-    "property_type" (string or null),
+    "property_types" (list of strings or null),
     "postcode_district" (string or null, e.g., 'LS6')
     """
 
@@ -51,22 +56,25 @@ def smart_property_search(request: SmartSearchRequest, db: Session = Depends(get
         model = genai.GenerativeModel('gemini-2.5-flash')
         response = model.generate_content(prompt)
         
-        # Strip any markdown formatting the LLM might have added (like ```json ... ```)
+        # Strip any markdown formatting
         clean_json_string = response.text.replace("```json", "").replace("```", "").strip()
         search_params = json.loads(clean_json_string)
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI parsing failed: {str(e)}")
 
-    # 3. Dynamically build the SQLAlchemy query based on the LLM's output
+    # 3. Dynamically build the SQLAlchemy query 
     db_query = db.query(PropertyListing)
     
     if search_params.get("max_price"):
         db_query = db_query.filter(PropertyListing.price <= search_params["max_price"])
     if search_params.get("min_bedrooms"):
         db_query = db_query.filter(PropertyListing.bedrooms >= search_params["min_bedrooms"])
-    if search_params.get("property_type"):
-        db_query = db_query.filter(PropertyListing.property_type == search_params["property_type"])
+        
+    # NEW: Handle a list of property types using SQLAlchemy's .in_() operator
+    if search_params.get("property_types"):
+        db_query = db_query.filter(PropertyListing.property_type.in_(search_params["property_types"]))
+        
     if search_params.get("postcode_district"):
         db_query = db_query.filter(PropertyListing.postcode.like(f"{search_params['postcode_district']}%"))
 
