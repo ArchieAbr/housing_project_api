@@ -2,8 +2,13 @@
 
 A production-ready RESTful API providing property listing data and market analytics for the Leeds housing market. Built with FastAPI and PostgreSQL, containerised with Docker, and deployed on Microsoft Azure.
 
-## Table of Contents
+## API Reference
 
+**📄 [Download the complete API Documentation (PDF)](./API_Documentation.pdf)**
+
+Interactive API documentation is available at `/docs` (Swagger UI) and `/redoc` (ReDoc).
+
+## Table of Contents
 - [Features](#features)
 - [Technology Stack](#technology-stack)
 - [API Reference](#api-reference)
