@@ -462,15 +462,15 @@ GEMINI_API_KEY=your_gemini_api_key_here
 2. **Create environment file:**
 
    ```bash
-   echo "API_KEY=your_secret_key_here" > .env
+   echo "API_KEY=leeds_test_key_123" > .env
    echo "GEMINI_API_KEY=your_gemini_api_key_here" >> .env
    ```
-   *(Note the use of `>>` on the second line so it appends to the file rather than overwriting it).* 
-
 3. **Start the containers:**
 
    ```bash
    docker-compose up --build
+   # Or
+   docker compose up --build
    ```
    **Troubleshooting:** On the very first run, the PostgreSQL database may take a few seconds to initialise. If the API container exits with a database connection error, simply wait 5 seconds and run docker-compose up again.
 

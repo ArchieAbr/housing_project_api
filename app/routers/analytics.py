@@ -26,7 +26,7 @@ class SmartSearchRequest(BaseModel):
 def smart_property_search(request: SmartSearchRequest, db: Session = Depends(get_db)):
     """
     Creative GenAI Feature: Translate a natural language sentence into a database query.
-    Example: "Find me the details for 6 Hessle Mount in LS6"
+    Example: "I need a detached family home in LS6 with 3 bedrooms for under £350k"
     """
     if not GEMINI_API_KEY:
         raise HTTPException(status_code=500, detail="Gemini API key not configured on the server.")
