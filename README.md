@@ -262,11 +262,13 @@ curl -X POST "http://localhost:8000/api/analytics/smart-search" \
 ```json
 {
   "ai_interpretation": {
-    "max_price": 350000,
-    "min_bedrooms": 3,
-    "property_type": "Detached",
-    "postcode_district": "LS6"
-  },
+  "max_price": 350000,
+  "min_bedrooms": 3,
+  "property_types": ["Detached"],
+  "postcode_district": "LS6",
+  "exact_postcode": null,
+  "address_keywords": null
+  }
   "results_count": 2,
   "properties": [
     {
@@ -487,20 +489,35 @@ python import_data.py
 
 ## Running Tests
 
-Execute the test suite inside the Docker container:
+The test suite is designed as a set of live integration tests that run directly against the deployed Azure server. To execute these tests, you must have a local `.env` file containing the valid `TEST_API_KEY` to authenticate against the live endpoints.
+
+**Warning:** Do not commit your `.env` file to version control.
+
+### 1. Set up the Environment Variables
+
+Load the variables from your `.env` file into your active terminal session.
 
 ```bash
-docker-compose exec api pytest app/test_main.py -v
+export $(grep -v '^#' .env | xargs)
 ```
+### 2. Execute the Test Suite
 
-**Test Coverage:**
+Once the environment variables are loaded, run the tests using pytest:
 
-- Authentication and authorisation
-- CRUD operations
-- Data validation (postcode format, price constraints)
-- Pagination logic
-- Error handling
+```bash
+pytest app/test_integration.py -v
+```
+### Test Coverage Includes:
 
+#### 1. Live endpoint connectivity and health checks
+
+#### 2. API Key authentication and rejection handling
+
+#### 3. Full CRUD lifecycle verification on the production database
+
+#### 4. Data validation (postcode formatting, negative value rejection)
+
+#### 5. Real-time latency checks for the Generative AI (Google Gemini) smart search
 ---
 
 ## Database Migrations
