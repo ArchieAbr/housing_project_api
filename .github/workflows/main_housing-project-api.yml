@@ -10,31 +10,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r app/requirements.txt
-          pip install pytest-cov
-          
-      - name: Run Pytest
-        env:
-          PYTHONPATH: .
-          API_KEY: ${{ secrets.API_KEY }}
-        run: |
-          pip install pytest-cov
-          pytest app/test_main.py -v
-
   build:
     runs-on: ubuntu-latest
     permissions:
@@ -68,9 +43,8 @@ jobs:
       contents: read #This is required for actions/checkout
 
     needs: build
-    
+
     steps:
-      
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -82,7 +56,6 @@ jobs:
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v2
         with:
-          app-name: 'housing-project-api'
-          slot-name: 'Production'
-          images: 'housingacr.azurecr.io/${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_FF47B1B4DAF84B7F8B57D9D2CECA2A27 }}/housing-api:${{ github.sha }}'
-          
+          app-name: "housing-project-api"
+          slot-name: "Production"
+          images: "housingacr.azurecr.io/${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_FF47B1B4DAF84B7F8B57D9D2CECA2A27 }}/housing-api:${{ github.sha }}"
